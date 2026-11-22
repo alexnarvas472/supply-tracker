@@ -384,7 +384,9 @@ if (!window.__pa) (function () {
         .replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
       html = html.split('"' + p + '"').join(json);
     });
-    const head = '<link rel="manifest" href="manifest.webmanifest">' +
+    const head = (/name=["']?viewport/i.test(html) ? '' :
+        '<meta name="viewport" content="width=device-width, initial-scale=1">') +
+      '<link rel="manifest" href="manifest.webmanifest">' +
       '<meta name="theme-color" content="#2e7d32">' +
       '<link rel="icon" href="icon-192.png">' +
       '<script src="app-config.js"><\/script><script src="shim.js"><\/script>';

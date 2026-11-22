@@ -143,7 +143,7 @@ if (!window.__pa) (function () {
       if (fn === "addNewItem") {
         const o = a[1] || {};
         if (o.addToList) addToShopping(a[0], o.listQty, o.neededFor, o.urgency);
-        setInvQty(a[0], q => (o.qty === "" || o.qty == null ? q : Number(o.qty)), { group: o.group || "" });
+        setInvQty(a[0], q => (o.qty === "" || o.qty == null ? q : Number(o.qty)), { group: o.group || "", category: o.category || "" });
       }
       if (fn === "addPurchase") {
         patchCache("getShoppingList", list => {
@@ -153,6 +153,14 @@ if (!window.__pa) (function () {
         setInvQty(a[0], q => q + (Number(a[1]) || 1));
       }
       if (fn === "useItem") setInvQty(a[0], q => q - (Number(a[1]) || 1));
+      if (fn === "setItemCategory") {
+        patchCache("getInventory", list => {
+          const row = list.find(x => norm(x.item) === norm(a[0]));
+          if (!row) return;
+          row.category = a[1] || "";
+          if (a[2] !== null && a[2] !== undefined) row.group = a[2];
+        });
+      }
       if (fn === "setInventoryCount" || fn === "updateInventoryItem") setInvQty(a[0], () => Number(a[1]) || 0);
     } catch (e) { console.warn(e); }
   }
@@ -393,7 +401,9 @@ if (!window.__pa) (function () {
   }
 
   function render(html) {
-    const head = '<link rel="manifest" href="manifest.webmanifest">' +
+    const head = (/name=["']?viewport/i.test(html) ? '' :
+        '<meta name="viewport" content="width=device-width, initial-scale=1">') +
+      '<link rel="manifest" href="manifest.webmanifest">' +
       '<meta name="theme-color" content="#2e7d32">' +
       '<link rel="icon" href="icon-192.png">' +
       '<script src="shim.js"><\/script>';
