@@ -310,6 +310,20 @@ if (!window.__pa) (function () {
     warm();
   }
 
+  async function updateApp(box) {
+    if (!navigator.onLine) { alert("You're offline. Connect to the internet to update."); return; }
+    const b = box && box.querySelector("#pa-update");
+    if (b) { b.disabled = true; b.textContent = "Updating…"; }
+    try { await flush(); } catch (e) {}
+    if (queue().length) {
+      if (b) { b.disabled = false; b.textContent = "Update app"; }
+      alert("Couldn't send your waiting changes yet, so the app wasn't reloaded. Try again in a moment.");
+      return;
+    }
+    try { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } catch (e) {}
+    location.reload();
+  }
+
   function showSettings() {
     const cfg = config() || {};
     const n = queue().length;
@@ -326,11 +340,13 @@ if (!window.__pa) (function () {
         <p style="font-size:13px;color:#555">${n} change(s) waiting to sync.</p>
         <button id="pa-save" style="padding:10px 14px">Save</button>
         <button id="pa-sync" style="padding:10px 14px">Sync now</button>
+        <button id="pa-update" style="padding:10px 14px">Update app</button>
         <button id="pa-close" style="padding:10px 14px">Close</button>
       </div>`;
     document.body.appendChild(box);
     box.querySelector("#pa-close").onclick = () => box.remove();
     box.querySelector("#pa-sync").onclick = () => { box.remove(); flush().then(warm); };
+    box.querySelector("#pa-update").onclick = () => updateApp(box);
     box.querySelector("#pa-save").onclick = () => {
       const url = box.querySelector("#pa-url").value.trim();
       const key = box.querySelector("#pa-key").value.trim();
@@ -349,6 +365,11 @@ if (!window.__pa) (function () {
 
   // ---------- start-up (called by index.html) ----------
   async function boot() {
+    // Wait until the start-up page has fully loaded before replacing it.
+    if (document.readyState === "loading") {
+      await new Promise(r => document.addEventListener("DOMContentLoaded", r, { once: true }));
+    }
+    await new Promise(r => setTimeout(r, 0));
     if (navigator.storage && navigator.storage.persist) { try { navigator.storage.persist(); } catch (e) {} }
     const cfg = config();
     if (!cfg) return showSetup();

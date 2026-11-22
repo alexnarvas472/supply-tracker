@@ -1,6 +1,7 @@
 // Keeps the app's own files on the phone so it opens with no internet.
 // Your data is stored separately (by shim.js), not here.
-const CACHE = "supply-tracker-v1";
+const PREFIX = "supply-tracker-";
+const CACHE = PREFIX + "v2";
 const FILES = ["./", "index.html", "shim.js", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {
@@ -10,7 +11,7 @@ self.addEventListener("install", e => {
 self.addEventListener("activate", e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith(PREFIX) && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
