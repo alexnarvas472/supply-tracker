@@ -46,7 +46,7 @@ if (!window.__pa) (function () {
     return data;
   }
   async function callServer(fn, args) {
-    const data = await api({ fn, args });
+    const data = await api({ fn, args }, TYPE().timeoutMs);
     if (!data.ok) throw new Error(data.error || "Something went wrong.");
     return data.result;
   }

@@ -209,5 +209,14 @@ window.MYAPPS_TYPES = window.MYAPPS_TYPES || (function () {
     }
   };
 
-  return { generic, register, hours, hourly };
+  /* ---------------- Receipts (photo -> Gemini -> review -> save) ----------------
+   * Needs internet to read and save receipts. Only small settings are kept
+   * offline: photos are never cached, so they can't fill the phone's storage. */
+  const receipts = {
+    label: "Receipts", icon: "🧾",
+    reads: ["rrConfig", "rfHistoryState", "getFolders"],
+    timeoutMs: 180000   // Gemini can take a while on a long receipt
+  };
+
+  return { generic, register, hours, hourly, receipts };
 })();
