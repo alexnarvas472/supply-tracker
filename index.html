@@ -3,39 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Home Supply Tracker</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#2e7d32">
-  <link rel="icon" href="icon-192.png">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>Alex's apps</title>
   <style>
     body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; background: #f6f7f6; color: #222; }
-    .card { max-width: 440px; margin: 40px auto; background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
-    label { display: block; font-size: 14px; margin-top: 12px; }
-    input { width: 100%; box-sizing: border-box; padding: 11px; font-size: 16px; margin-top: 4px; border: 1px solid #ccc; border-radius: 8px; }
-    button { margin-top: 16px; width: 100%; padding: 13px; font-size: 16px; border: 0; border-radius: 8px; background: #2e7d32; color: #fff; }
-    #pa-err { color: #b00020; font-size: 14px; margin-top: 10px; min-height: 1em; }
-    #pa-loading { text-align: center; margin-top: 30vh; color: #555; }
+    .wrap { max-width: 460px; margin: 30px auto; }
+    a.app { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 14px; padding: 16px;
+      margin: 12px 0; text-decoration: none; color: inherit; box-shadow: 0 2px 10px rgba(0,0,0,.08); font-size: 19px; font-weight: 600; }
+    a.app img { width: 52px; height: 52px; border-radius: 12px; }
+    p { color: #555; line-height: 1.45; }
   </style>
+  <script>
+    // Remove the old site-wide offline worker (each app has its own now).
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+  </script>
 </head>
 <body>
-  <div id="pa-loading"><img src="icon-192.png" width="72" height="72" alt=""><p id="pa-msg">Loading…</p></div>
-
-  <div id="pa-setup" class="card" style="display:none">
-    <h2 style="margin-top:0">Set up</h2>
-    <p style="font-size:14px;color:#555">You only do this once on this phone.</p>
-    <label for="pa-url">Apps Script web app URL (ends in /exec)</label>
-    <input id="pa-url" autocomplete="off" autocapitalize="off" spellcheck="false">
-    <label for="pa-key">Key</label>
-    <input id="pa-key" type="password" autocomplete="off">
-    <div id="pa-err"></div>
-    <button id="pa-go">Connect</button>
+  <div class="wrap">
+    <h2>Your apps</h2>
+    <a class="app" href="supplies/"><img src="supplies/icon-192.png" alt="">Home Supply Tracker</a>
+    <a class="app" href="todo/"><img src="todo/icon-192.png" alt="">To-Do Checklist</a>
+    <p>Open one, then tap <b>⋮ → Install app</b> in Chrome.</p>
+    <p style="font-size:14px">Had the old “Supplies” app installed? Uninstall it (long-press its icon → App info → Uninstall),
+      then install Home Supply Tracker again from here. Your URL and key are remembered.</p>
   </div>
-
-  <script src="shim.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
-    window.__pa.boot();
-  </script>
 </body>
 </html>

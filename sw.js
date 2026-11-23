@@ -1,33 +1,12 @@
-// Keeps the app's own files on the phone so it opens with no internet.
-// Your data is stored separately (by shim.js), not here.
-const PREFIX = "supply-tracker-";
-const CACHE = PREFIX + "v2";
-const FILES = ["./", "index.html", "shim.js", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
-
-self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
-});
-
+// Retired: each app now lives in its own folder (supplies/, todo/) with its own
+// service worker. This removes the old site-wide one and its saved files.
+self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => {
-  e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k.startsWith(PREFIX) && k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener("fetch", e => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== "GET" || url.origin !== location.origin) return; // Google calls go straight through
-  // Network first (so updates arrive), fall back to the saved copy offline.
-  e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
-        return res;
-      })
-      .catch(() => caches.match(e.request, { ignoreSearch: true })
-        .then(r => r || caches.match("index.html")))
-  );
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k.startsWith("supply-tracker-v1") || k === "supply-tracker-v2").map(k => caches.delete(k)));
+    await self.registration.unregister();
+    const clients = await self.clients.matchAll({ type: "window" });
+    clients.forEach(c => c.navigate(c.url));
+  })());
 });
