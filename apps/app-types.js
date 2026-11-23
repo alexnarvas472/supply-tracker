@@ -142,5 +142,72 @@ window.MYAPPS_TYPES = window.MYAPPS_TYPES || (function () {
     }
   };
 
-  return { generic, register, hours };
+  /* ---------------- Hourly Planner and Log ("monthly plan") ----------------
+   * Offline: the hour-by-hour log (view, save/clear an hour, save the day)
+   * and the time tracker panel. Everything else needs internet. */
+  function patchDayLog(cache, date, f) {
+    const day = cache.read("getDayLog", [date]);
+    if (!day || !Array.isArray(day.entries)) return;
+    f(day);
+    cache.write("getDayLog", [date], day);
+  }
+  const hourly = {
+    label: "Hourly planner & log", icon: "🕒",
+    isRead: fn => /^(get|hlogTodoGet)/.test(fn),
+    offlineWrites: ["saveOneHour", "clearOneHour", "saveDayLog", "saveHourCategory"],
+    warm() {
+      const calls = [{ fn: "getCategoryLibrary", args: [] }];
+      for (let i = -7; i <= 1; i++) {
+        const d = new Date(); d.setDate(d.getDate() + i);
+        calls.push({ fn: "getDayLog", args: [dateKey(d)] });
+      }
+      return calls.concat(hours.warm());
+    },
+    onResult(fn, a, data, cache) { if (fn === "getTimeDashboard") hours.onResult(fn, a, data, cache); },
+    offlineRead(fn, a, cache) {
+      if (fn === "getTimeDashboard") return hours.offlineRead(fn, a, cache);
+      if (fn === "getDayLog") {
+        const day = cache.read("getDayLog", a);
+        if (day) return day;
+        throw new Error("You're offline, and " + a[0] + " wasn't saved on this phone (only the last 7 days, today and tomorrow are).");
+      }
+      return undefined;
+    },
+    applyOffline(fn, a, cache) {
+      const p = a[0] || {};
+      if (fn === "saveOneHour") {
+        patchDayLog(cache, p.date, day => {
+          const e = day.entries.find(x => Number(x.hour) === Number(p.hour));
+          if (e) { e.activity = String(p.activity || "").trim(); e.category = String(p.category || "").trim(); }
+        });
+        return { success: true, hour: Number(p.hour) };
+      }
+      if (fn === "clearOneHour") {
+        patchDayLog(cache, p.date, day => {
+          const e = day.entries.find(x => Number(x.hour) === Number(p.hour));
+          if (e) { e.activity = ""; e.category = ""; }
+        });
+        return { success: true };
+      }
+      if (fn === "saveDayLog") {
+        patchDayLog(cache, p.date, day => {
+          (p.entries || []).forEach((n, h) => {
+            const e = day.entries.find(x => Number(x.hour) === h);
+            if (e) { e.activity = String(n.activity || "").trim(); e.category = String(n.category || "").trim(); }
+          });
+        });
+        return { success: true, message: "The log for " + p.date + " was saved" + (navigator.onLine ? "." : " on this phone (will sync when you're online).") };
+      }
+      if (fn === "saveHourCategory") {
+        patchDayLog(cache, a[0], day => {
+          const e = day.entries.find(x => Number(x.hour) === Number(a[1]));
+          if (e) e.category = String(a[2] || "").trim();
+        });
+        return hours.applyOffline(fn, a, cache);
+      }
+      return undefined;
+    }
+  };
+
+  return { generic, register, hours, hourly };
 })();

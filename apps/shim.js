@@ -84,7 +84,7 @@ if (!window.__pa) (function () {
   }
 
   // ---------- the google.script.run replacement ----------
-  const isRead = fn => (TYPE().reads ? TYPE().reads.indexOf(fn) !== -1 : /^(get|load|list|fetch|read|find|search|show)/i.test(fn));
+  const isRead = fn => (TYPE().isRead ? TYPE().isRead(fn) : TYPE().reads ? TYPE().reads.indexOf(fn) !== -1 : /^(get|load|list|fetch|read|find|search|show)/i.test(fn));
   const canQueue = fn => (TYPE().offlineWrites || []).indexOf(fn) !== -1;
 
   async function call(fn, args) {
