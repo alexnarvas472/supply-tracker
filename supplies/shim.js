@@ -298,6 +298,7 @@ if (!window.__pa) (function () {
   }
   function mountStatus() {
     if (document.getElementById("pa-status")) return;
+    attachListeners();   // once per page; the page swap erased the earlier ones
     const st = document.createElement("div");
     st.id = "pa-status";
     st.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:99999;" +
@@ -365,11 +366,15 @@ if (!window.__pa) (function () {
     };
   }
 
-  window.addEventListener("online", () => { updateStatus(); flush().then(warm); });
-  window.addEventListener("offline", updateStatus);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && navigator.onLine) flush();
-  });
+  // The page swap (document.open) erases listeners, so (re)attach them on every page.
+  function attachListeners() {
+    window.addEventListener("online", () => { updateStatus(); flush().then(warm); });
+    window.addEventListener("offline", updateStatus);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && navigator.onLine) flush();
+    });
+  }
+  attachListeners();
 
   // ---------- start-up (called by index.html) ----------
   async function boot() {

@@ -15,3 +15,10 @@ https://alexnarvas472.github.io/supply-tracker/todo/
 
 Each app must live in its own sibling folder (never one app's folder inside another's), or Android treats the inner one as part of the outer app and won't offer to install it.
 Same setup: paste that script's `/exec` URL and its own key (from its `setupPhoneApi`).
+
+## My Apps (apps/)
+
+One installable app that holds any number of Apps Script apps. Each app needs
+`MyAppsConnector.js` in its project (same file for every app), a deployment with
+access "Anyone", and its URL + key added in My Apps. Offline rules per kind of app
+live in `apps/app-types.js`.
