@@ -8,7 +8,7 @@ $dir  = Join-Path $HOME 'AppsScript\_pc-sync'
 Write-Host "`nSetting up Apps Script sync on $env:COMPUTERNAME ...`n"
 
 $py = @('py','python') | Where-Object { Get-Command $_ -ErrorAction SilentlyContinue } |
-      Where-Object { (& $_ --version 2>&1) -match 'Python 3' } | Select-Object -First 1
+      Where-Object { try { (& $_ --version 2>&1 | Out-String) -match 'Python 3' } catch { $false } } | Select-Object -First 1
 if (-not $py) { Write-Host "Python 3 is missing. Install it from https://www.python.org/downloads/ (tick 'Add to PATH'), then run this again."; return }
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Write-Host "Node.js is missing. Install it from https://nodejs.org/, then run this again."; return }
 if (-not (Get-Command clasp -ErrorAction SilentlyContinue)) {
