@@ -616,19 +616,49 @@ def before_deploy(auth, folder):
     if prev and prev.get("remote") == remote_h:
         print("Google hasn't changed since this PC last synced. Safe to deploy.")
         return 0
-    if not prev:
-        upd = get_update_time(auth, sid)
-        upd_ts = dt.datetime.fromisoformat(upd.replace("Z", "+00:00")).timestamp() if upd else 0
-        if newest_mtime(d, cfg, local_now) >= upd_ts:
-            print("This PC's code is newer than Google's. Safe to deploy.")
-            return 0
+    # Never synced on this PC and Google's copy is different: we can't tell whose
+    # changes are newer (file dates aren't reliable), so always stop and ask.
     save_conflict(d, cfg, remote_now)
     changed = sorted(k for k in set(remote_now) | set(local_now) if norm(remote_now.get(k, "")) != norm(local_now.get(k, "")))
-    print("\nSTOP: Google has a NEWER version of this project (changed on another PC or in the online editor).")
+    if not prev:
+        print("\nSTOP: Google's copy of this project is DIFFERENT from this PC's, and this PC has never synced it,")
+        print("so there's no way to tell which changes are newer (it may have been edited in the online editor).")
+    else:
+        print("\nSTOP: Google has a NEWER version of this project (changed on another PC or in the online editor).")
     print("Deploying now would overwrite it. Files that differ: " + ", ".join(changed))
     print(f"Google's version was saved to: {CONFLICT_DIR / d.name}")
     print("Run sync-now.cmd (or press Back up to PC) to get it, then make your changes again.")
     return 2
+
+
+def download_versions(auth, folder):
+    """Save every stored version of a project (plus Google's current copy) for recovery."""
+    d, cfg, sid = project_at(folder)
+    out = HERE / "versions" / d.name
+    versions, token = [], None
+    while True:
+        url = f"{SCRIPT}/projects/{q(sid)}/versions?pageSize=50" + (f"&pageToken={q(token)}" if token else "")
+        data = api(auth, "GET", url)
+        versions += data.get("versions", [])
+        token = data.get("nextPageToken")
+        if not token:
+            break
+    targets = [("current-on-Google", None)] + [
+        (f"v{v['versionNumber']}  {v.get('createTime', '')[:16].replace(':', '-')}  {v.get('description', '')[:40]}".strip(), v["versionNumber"])
+        for v in sorted(versions, key=lambda v: v["versionNumber"])]
+    print(f"{len(versions)} saved version(s) found for {d.name}.")
+    for name, num in targets:
+        url = f"{SCRIPT}/projects/{q(sid)}/content" + (f"?versionNumber={num}" if num else "")
+        files = remote_files(api(auth, "GET", url).get("files", []), d, cfg, {})
+        dest = out / INVALID.sub("_", name).strip()
+        for rel, text in files.items():
+            p = dest / PurePosixPath(rel)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(text, encoding="utf-8")
+        summaries = [m.strip() for f, t in files.items() if f.endswith(".html")
+                     for m in re.findall(r"<summary[^>]*>(.*?)</summary>", t, re.S)]
+        print(f"  {name}:  dropdowns = " + (", ".join(re.sub(r"<[^>]+>", "", x) for x in summaries) or "(none)"))
+    print(f"\nSaved to: {out}")
 
 
 def mark_deployed(folder):
@@ -644,6 +674,7 @@ def main():
     ap.add_argument("--watch", action="store_true", help="keep running and wait for requests")
     ap.add_argument("--before-deploy", metavar="FOLDER", help="back up + check Google before deploying")
     ap.add_argument("--mark-deployed", metavar="FOLDER", help="record that FOLDER was just deployed")
+    ap.add_argument("--versions", metavar="FOLDER", help="download every saved version of FOLDER's project")
     args = ap.parse_args()
     HERE.mkdir(parents=True, exist_ok=True)
     if args.mark_deployed:
@@ -663,6 +694,9 @@ def main():
         log(f"Can't sign in to Google with your clasp login: {e}")
         notify("Apps Script backup", "Can't sign in. Run 'clasp login' and try again.")
         return 1
+    if args.versions:
+        download_versions(auth, args.versions)
+        return 0
     if args.before_deploy:
         try:
             return before_deploy(auth, args.before_deploy)

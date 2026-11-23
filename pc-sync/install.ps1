@@ -21,7 +21,7 @@ if (-not (Test-Path (Join-Path $HOME '.clasprc.json'))) {
 }
 
 New-Item -ItemType Directory -Force $dir | Out-Null
-foreach ($f in 'pc_sync.py','deploy.cjs','sync-now.cmd','install-helper.cmd','uninstall-helper.cmd') {
+foreach ($f in 'pc_sync.py','deploy.cjs','sync-now.cmd','install-helper.cmd','uninstall-helper.cmd','get-old-versions.cmd') {
   Invoke-WebRequest ($base + $f) -OutFile (Join-Path $dir $f) -UseBasicParsing
 }
 Write-Host "Sync helper saved to $dir`n"
