@@ -1,7 +1,7 @@
 // Keeps the app's own files on the phone so it opens with no internet.
 // Your data is stored separately (by shim.js), not here.
 const PREFIX = "todo-checklist-";
-const CACHE = PREFIX + "v2";
+const CACHE = PREFIX + "v3";
 const FILES = ["./", "index.html", "app-config.js", "shim.js", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {

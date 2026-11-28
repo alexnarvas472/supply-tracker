@@ -294,6 +294,17 @@ if (!window.__pa) (function () {
       return;
     }
     try { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } catch (e) {}
+    if (b) b.textContent = "Downloading… (can take a minute)";
+    try {
+      const data = await api({ fn: "__ui" }, 120000);
+      if (!data || !data.ok || !data.result) throw new Error((data && data.error) || "Google sent back an empty page.");
+      saveUi(data);
+    } catch (e) {
+      if (b) { b.disabled = false; b.textContent = "Update app"; }
+      alert("Couldn't download the new version:\n" + (e.message || e) +
+        "\n\nYou're still on the saved version. Check your connection and try again.");
+      return;
+    }
     location.reload();
   }
 
@@ -353,22 +364,56 @@ if (!window.__pa) (function () {
     if (!cfg) return showSetup();
 
     let html = null;
+    const saved = LS.get(UI_KEY, null);
     if (navigator.onLine) {
-      try {
-        if (queue().length) await flush();
-        const data = await api({ fn: "__ui" }, LS.get(UI_KEY, null) ? 12000 : 60000);
-        if (data.ok && data.result) saveUi(data), html = data.result;
-      } catch (e) {
-        if (e.auth) return showSetup(e.message);
+      try { if (queue().length) await flush(); } catch (e) {}
+      // Ask Google for the newest screens. Wait as long as it takes.
+      const fresh = api({ fn: "__ui" }, 120000).then(data => {
+        if (data && data.ok && data.result) { saveUi(data); return data.result; }
+        throw new Error((data && data.error) || "Google sent back an empty page.");
+      });
+      if (!saved) {
+        try { html = await fresh; }
+        catch (e) {
+          if (e.auth) return showSetup(e.message);
+          document.getElementById("pa-msg").textContent = "Couldn't load the app: " + e.message;
+          return;
+        }
+      } else {
+        // Have a saved copy: use the new one if it comes quickly, otherwise
+        // open the saved one now and offer the new one when it arrives.
+        const quick = await Promise.race([
+          fresh.then(r => ({ html: r }), e => ({ error: e })),
+          new Promise(r => setTimeout(() => r(null), 8000))
+        ]);
+        if (quick && quick.html) html = quick.html;
+        else if (quick && quick.error && quick.error.auth) return showSetup(quick.error.message);
+        else if (!quick) {
+          fresh.then(r => { if (r !== saved) showNewVersionBanner(); }, e => {
+            if (e.auth) toast(e.message);
+          });
+        }
       }
     }
-    html = html || LS.get(UI_KEY, null);
+    html = html || saved;
     if (!html) {
       document.getElementById("pa-msg").textContent =
         "Connect to the internet once so the app can download your lists.";
       return;
     }
     render(html);
+  }
+
+  function showNewVersionBanner() {
+    if (document.getElementById("pa-new-version")) return;
+    const b = document.createElement("button");
+    b.id = "pa-new-version";
+    b.textContent = "New version ready · tap to load";
+    b.style.cssText = "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:100001;" +
+      "padding:12px 18px;border:none;border-radius:999px;background:#1f5fa8;color:#fff;font-size:16px;" +
+      "font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.3);width:auto;margin:0";
+    b.onclick = () => { b.textContent = "Loading…"; location.reload(); };
+    document.body.appendChild(b);
   }
 
   function saveUi(data) {
